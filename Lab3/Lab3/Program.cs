@@ -89,6 +89,7 @@ namespace Lab3
             });
             thread.IsBackground = false;
             thread.Start();
+            //
         }
 
         private static void DrawShape(IntPtr renderer, Shape shape)
