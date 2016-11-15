@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -27,8 +28,15 @@ namespace Lab3
                     {
                         new SDL.SDL_Point() {x = 0, y = 0}, new SDL.SDL_Point() {x = 200, y = 0},
                         new SDL.SDL_Point() {x = 200, y = 200}, new SDL.SDL_Point() {x = 0, y = 100}
-                    });
-                var ellipse = new Ellipse(100, 200);
+                    }) {Layer = 1};
+                var temp = new Polygon(
+                    new[]
+                    {
+                        new SDL.SDL_Point() {x = 0, y = 0}, new SDL.SDL_Point() {x = 200, y = 0},
+                        new SDL.SDL_Point() {x = 200, y = 200}, new SDL.SDL_Point() {x = 0, y = 100}
+                    })
+                { Layer = 2 };
+                //var ellipse = new Ellipse(100, 200) {Layer = 2};
                 var frame = new Polygon(
                     new[]
                     {
@@ -39,11 +47,15 @@ namespace Lab3
                 {
                     TransformX = 100,
                     TransformY = 100,
+                    Layer = 3
                 };
-                DrawShapes(renderer, frame, trapeze, ellipse);
+
+                List<Shape> shapes = new List<Shape>() {trapeze, temp};
+
+                DrawShapes(renderer, frame, shapes);
 
                 SDL.SDL_Point trapezeVector = new SDL.SDL_Point() {x = -10, y = 10};
-                SDL.SDL_Point ellipseVector = new SDL.SDL_Point() { x = -10, y = -5 };
+                SDL.SDL_Point ellipseVector = new SDL.SDL_Point() { x = -10, y = -10 };
                 Random radnom = new Random();
                 Timer timer = new Timer(e =>
                 {
@@ -69,37 +81,61 @@ namespace Lab3
                         trapezeVector.x = -radnom.Next(0, 10);
                         trapezeVector.y = radnom.Next(0, 10);
                     }
-                    trapeze.Rotate += 10;
+                    trapeze.Rotate += 3;
 
-                    ellipse.TransformX += ellipseVector.x;
-                    ellipse.TransformY += ellipseVector.y;
-                    if (ellipse.TransformX >= windowWidth)
+                    //ellipse.TransformX += ellipseVector.x;
+                    //ellipse.TransformY += ellipseVector.y;
+                    //if (ellipse.TransformX >= windowWidth)
+                    //{
+                    //    ellipseVector.x = -radnom.Next(0, 10);
+                    //    ellipseVector.y = radnom.Next(0, 10);
+                    //}
+                    //else if (ellipse.TransformX <= 0)
+                    //{
+                    //    ellipseVector.x = radnom.Next(0, 10);
+                    //    ellipseVector.y = -radnom.Next(0, 10);
+                    //}
+                    //if (ellipse.TransformY >= windowHeight)
+                    //{
+                    //    ellipseVector.x = -radnom.Next(0, 10);
+                    //    ellipseVector.y = -radnom.Next(0, 10);
+                    //}
+                    //else if (ellipse.TransformY <= 0)
+                    //{
+                    //    ellipseVector.x = radnom.Next(0, 10);
+                    //    ellipseVector.y = radnom.Next(0, 10);
+                    //}
+                    //ellipse.Rotate += 1;
+
+                    temp.TransformX += ellipseVector.x;
+                    temp.TransformY += ellipseVector.y;
+                    if (temp.TransformX >= windowWidth)
                     {
                         ellipseVector.x = -radnom.Next(0, 10);
                         ellipseVector.y = radnom.Next(0, 10);
                     }
-                    else if (ellipse.TransformX <= 0)
+                    else if (temp.TransformX <= 0)
                     {
                         ellipseVector.x = radnom.Next(0, 10);
                         ellipseVector.y = -radnom.Next(0, 10);
                     }
-                    if (ellipse.TransformY >= windowHeight)
+                    if (temp.TransformY >= windowHeight)
                     {
                         ellipseVector.x = -radnom.Next(0, 10);
                         ellipseVector.y = -radnom.Next(0, 10);
                     }
-                    else if (ellipse.TransformY <= 0)
+                    else if (temp.TransformY <= 0)
                     {
                         ellipseVector.x = radnom.Next(0, 10);
                         ellipseVector.y = radnom.Next(0, 10);
                     }
-                    ellipse.Rotate += 5;
+                    temp.Rotate += 1;
 
-                    DrawShapes(renderer, frame, trapeze, ellipse);
+                    DrawShapes(renderer, frame, shapes);
                 }, null, 0, 30);
-
                 
                 bool quit = false;
+                bool stopped = false;
                 while (!quit)
                 {
                     SDL.SDL_Event sdlEvent;
@@ -116,6 +152,18 @@ namespace Lab3
                             var key = sdlEvent.key;
                             switch (key.keysym.sym)
                             {
+                                case SDL.SDL_Keycode.SDLK_SPACE:
+                                    if (!stopped)
+                                    {
+                                        timer.Change(0, Timeout.Infinite);
+                                        stopped = true;
+                                    }
+                                    else
+                                    {
+                                        timer.Change(0, 30);
+                                        stopped = false;
+                                    }
+                                    break;
                                 case SDL.SDL_Keycode.SDLK_DOWN:
                                     frame.TransformY += 10;
                                     break;
@@ -129,7 +177,7 @@ namespace Lab3
                                     frame.TransformX += 10;
                                     break;
                             }
-                            DrawShapes(renderer, frame, trapeze, ellipse);
+                            DrawShapes(renderer, frame, shapes);
                             break;
                         }
                         case SDL.SDL_EventType.SDL_MOUSEBUTTONDOWN:
@@ -148,7 +196,7 @@ namespace Lab3
                                     frame.Scale -= 0.05;
                                 }
                             }
-                            DrawShapes(renderer, frame, trapeze, ellipse);
+                            DrawShapes(renderer, frame, shapes);
                             break;
                         }
 
@@ -166,25 +214,32 @@ namespace Lab3
 
         private static object lockObject = new object();
 
-        private static void DrawShapes(IntPtr renderer, Polygon frame, Polygon trapeze, Ellipse ellipse)
+        private static void DrawShapes(IntPtr renderer, Polygon frame, IEnumerable<Shape> shapes)
         {
             lock (lockObject)
             {
                 SDL.SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
                 SDL.SDL_RenderClear(renderer);
                 SDL.SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
-                DrawShape(renderer, frame);
-                DrawShape(renderer, trapeze);
-                DrawShape(renderer, ellipse);
+                //DrawShape(renderer,
+                //    new InterceptedShape(
+                //        frame.Points.Select(e => new VisibleSdlPoint() {Point = e, IsVisible = true}).ToArray()));
+                var interShapes = IntersectionSearcher.FindShapesIntersction(shapes);
+                foreach (var shape in interShapes)
+                    DrawShape(renderer, shape);
                 SDL.SDL_RenderPresent(renderer);
             }
         }
 
-        private static void DrawShape(IntPtr renderer, Shape shape)
-        {
-            for (int i = 0; i < shape.ShapePoints.Length; i++)
+        private static void DrawShape(IntPtr renderer, InterceptedShape shape)
+         {
+            
+            for (int i = 0; i < shape.Points.Length; i++)
             {
-                DrawLine(renderer, shape.ShapePoints[i], shape.ShapePoints[(i + 1)%shape.ShapePoints.Length]);
+                if (!shape.Points[i].IsVisible && !shape.Points[(i + 1)%shape.Points.Length].IsVisible)
+                    DrawDashLine(renderer, shape.Points[i].Point, shape.Points[(i + 1)%shape.Points.Length].Point);
+                else
+                    DrawLine(renderer, shape.Points[i].Point, shape.Points[(i + 1) % shape.Points.Length].Point);
             }
         }
 
@@ -234,6 +289,58 @@ namespace Lab3
             }
         }
 
+        private static void DrawDashLine(IntPtr renderer, SDL.SDL_Point p1, SDL.SDL_Point p2)
+        {
+            {
+                int dx = Math.Abs(p2.x - p1.x);
+                int dy = Math.Abs(p2.y - p1.y);
+                int sx = p2.x >= p1.x ? 1 : -1;
+                int sy = p2.y >= p1.y ? 1 : -1;
+                if (dy <= dx)
+                {
+                    int d = (dy << 1) - dx;
+                    int d1 = dy << 1;
+                    int d2 = (dy - dx) << 1;
+                    SDL.SDL_RenderDrawPoint(renderer, p1.x, p1.y);
+                    int count = 0;
+                    for (int x = p1.x + sx, y = p1.y, i = 1; i <= dx; i++, x += sx)
+                    {
+                        if (d > 0)
+                        {
+                            d += d2;
+                            y += sy;
+                        }
+                        else
+                            d += d1;
+                        if (count%100%2 == 0)
+                            SDL.SDL_RenderDrawPoint(renderer, x, y);
+                        count++;
+                    }
+                }
+                else
+                {
+                    int d = (dx << 1) - dy;
+                    int d1 = dx << 1;
+                    int d2 = (dx - dy) << 1;
+                    SDL.SDL_RenderDrawPoint(renderer, p1.x, p1.y);
+                    int count = 0;
+                    for (int x = p1.x, y = p1.y + sy, i = 1; i <= dy; i++, y += sy)
+                    {
+                        if (d > 0)
+                        {
+                            d += d2;
+                            x += sx;
+                        }
+                        else
+                            d += d1;
+                        if (count%100%2 == 0)
+                            SDL.SDL_RenderDrawPoint(renderer, x, y);
+                        count++;
+                    }
+                }
+            }
+        }
+
         private static void DrawCircle(IntPtr renderer, int _x, int _y, int radius)
         {
             int x = 0, y = radius, gap = 0, delta = (2 - 2*radius);
@@ -262,214 +369,60 @@ namespace Lab3
             }
         }
 
-        private abstract class Shape
+        private class VisibleSdlPoint
         {
-            public int Rotate
-            {
-                get { return transformer.Rotate; }
-                set
-                {
-                    transformer.Rotate = value;
-                    shapePoints = transformer.TransformPoints(Points);
-                }
-            }
-
-            public double Scale
-            {
-                get { return transformer.Scale; }
-                set
-                {
-                    transformer.Scale = value;
-                    shapePoints = transformer.TransformPoints(Points);
-                }
-            }
-
-            public int TransformX
-            {
-                get { return transformer.TransformX; }
-                set
-                {
-                    transformer.TransformX = value;
-                    shapePoints = transformer.TransformPoints(Points);
-                }
-            }
-
-            public int TransformY
-            {
-                get { return transformer.TransformY; }
-                set
-                {
-                    transformer.TransformY = value;
-                    shapePoints = transformer.TransformPoints(Points);
-                }
-            }
-            protected abstract SDL.SDL_Point[] Points { get; }
-
-            private SDL.SDL_Point[] shapePoints;
-            public SDL.SDL_Point[] ShapePoints => shapePoints ?? (shapePoints = transformer.TransformPoints(Points));
-            public bool[] IsPointVisibleArray { get; protected set; }
-
-            private readonly PointTransformer transformer = new PointTransformer()
-            {
-                Rotate = 0,
-                Scale = 1,
-                TransformX = 300,
-                TransformY = 300
-            };
+            public SDL.SDL_Point Point { get; set; }
+            public bool IsVisible { get; set; }
         }
 
-        private class Polygon : Shape
-        {
-            public Polygon(SDL.SDL_Point[] points)
-            {
-                this.Points = points;
-                this.IsPointVisibleArray = points.Select(e => true).ToArray();
-            }
-
-            public Polygon(SDL.SDL_Point[] points, bool[] isPointVisibleArray)
-            {
-                this.Points = points;
-                this.IsPointVisibleArray = isPointVisibleArray;
-            }
-
-            protected override SDL.SDL_Point[] Points { get; }
-        }
-
-        private class Ellipse : Shape, ICloneable
-        {
-            private const int PointNum = 10000;
-            public int A { get; set; }
-            public int B { get; set; }
-
-            public Ellipse(int A, int B)
-            {
-                this.Points = InitPoints(A, B);
-                this.IsPointVisibleArray = new bool[PointNum].Select(e => true).ToArray();
-            }
-
-            protected override SDL.SDL_Point[] Points { get; }
-
-            private SDL.SDL_Point[] InitPoints(int A, int B)
-            {
-
-                var result = new SDL.SDL_Point[PointNum];
-                for (int i = 0; i < result.Length; i++)
-                {
-                    result[i] = new SDL.SDL_Point
-                    {
-                        x = Convert.ToInt32(A*Math.Cos(2*Math.PI/PointNum*i)),
-                        y = Convert.ToInt32(B*Math.Sin(2*Math.PI/PointNum*i))
-                    };
-                }
-                return result;
-            }
-
-            public Ellipse Clone()
-            {
-                var el =  new Ellipse(A, B);
-                el.Rotate = this.Rotate;
-                el.Scale = this.Scale;
-                el.TransformX = this.TransformX;
-                el.TransformY = this.TransformY;
-                return el;
-            }
-
-            object ICloneable.Clone()
-            {
-                return Clone();
-            }
-        }
 
         private static class IntersectionSearcher
         {
-            public static Ellipse FindPolygonEllipseIntersection(Polygon polygon, Ellipse ellipse)
+
+            public static IEnumerable<InterceptedShape> FindShapesIntersction(IEnumerable<Shape> shapes)
             {
-                Ellipse result = ellipse.Clone();
-                for (int i = 0; i < result.ShapePoints.Length; i++)
-                {
-                    if (IsPointInPolygon(polygon.ShapePoints, result.ShapePoints[i]))
-                    {
-                        result.IsPointVisibleArray[i] = false;
-                    }
-                }
-                return result;
+                var temp = shapes as Shape[] ?? shapes.ToArray();
+                return temp.Select(e => FindIntersectionedShape(e, temp));
             }
 
-            public static Polygon FindEllipsePolygonIntersection(Polygon polygon, Ellipse ellipse)
+            public static InterceptedShape FindIntersectionedShape(Shape shape, IEnumerable<Shape> shapes)
             {
-                List<SDL.SDL_Point> interPoints = new List<SDL.SDL_Point>();
-                List<bool> isPointVisible = new List<bool>();
-                bool inPoly = true;
-                for (int i = 0; i < ellipse.ShapePoints.Length; i++)
+                var interShape =
+                    new InterceptedShape(
+                        shape.Points.Select(e => new VisibleSdlPoint() {Point = e, IsVisible = true}).ToArray());
+                foreach (var temp in shapes.Where(e => e.Layer > shape.Layer))
                 {
-                    if (inPoly)
-                    {
-                        if (IsPointInPolygon(polygon.ShapePoints, ellipse.ShapePoints[i]))
-                        {
-
-                            inPoly = false;
-                        }
-                        
-                    }
-                    else
-                    {
-                        if (!IsPointInPolygon(polygon.ShapePoints, ellipse.ShapePoints[i]))
-                        {
-                            inPoly = true;
-                        }                        
-                    }
+                    interShape = FindShapeIntersection(interShape, temp);
                 }
-                return new Polygon(interPoints.ToArray(), isPointVisible.ToArray())
-                {
-                    Rotate = polygon.Rotate,
-                    Scale = polygon.Scale,
-                    TransformX = polygon.TransformX,
-                    TransformY = polygon.TransformY
-                };
+                return interShape;
             }
 
-            private static bool IsPointInPolygon(SDL.SDL_Point[] polygonPoints, SDL.SDL_Point point)
+            public static InterceptedShape FindShapeIntersection(InterceptedShape lower, Shape upper)
             {
-                bool result = false;
-                for (int i = 0, j = polygonPoints.Length - 1; i < polygonPoints.Length; j = i++)
+                List<VisibleSdlPoint> interPoints = new List<VisibleSdlPoint>();
+                for (int i = 0; i < lower.Points.Length; i++)
                 {
-                    if ((((polygonPoints[i].y <= point.y) && (point.y < polygonPoints[j].y)) ||
-                         ((polygonPoints[j].y <= point.y) && (point.y < polygonPoints[i].y))) &&
-                        (point.x >
-                         (polygonPoints[j].x - polygonPoints[i].x)*(point.y - polygonPoints[i].y)/
-                         (polygonPoints[j].y - polygonPoints[i].y) + polygonPoints[i].x))
-                        result = !result;
-                }
-                return result;
-            }
-
-            public static Polygon FindPolygonsIntersection(Polygon lower, Polygon upper)
-            {
-                List<SDL.SDL_Point> interPoints = new List<SDL.SDL_Point>();
-                List<bool> isPointVisible = new List<bool>();
-                for (int i = 0; i < lower.ShapePoints.Length; i++)
-                {
-                    interPoints.Add(lower.ShapePoints[i]);
-                    isPointVisible.Add(IsPointInPolygon(upper.ShapePoints, lower.ShapePoints[i]));
-                    for (int j = 0; j < upper.ShapePoints.Length; j++)
+                    interPoints.Add(new VisibleSdlPoint()
                     {
-                        var interPoint = FindLinesIntersectionPoint(lower.ShapePoints[i],
-                            lower.ShapePoints[(i + 1)% lower.ShapePoints.Length], upper.ShapePoints[j],
-                            upper.ShapePoints[(j + 1)% upper.ShapePoints.Length]);
+                        Point = lower.Points[i].Point,
+                        IsVisible = lower.Points[i].IsVisible && IsPointInPolygon(upper.Points, lower.Points[i].Point)
+                    });
+                    for (int j = 0; j < upper.Points.Length; j++)
+                    {
+                        var interPoint = FindLinesIntersectionPoint(lower.Points[i].Point,
+                            lower.Points[(i + 1)% lower.Points.Length].Point, upper.Points[j],
+                            upper.Points[(j + 1)% upper.Points.Length]);
                         if (interPoint.HasValue)
                         {
-                            interPoints.Add(interPoint.Value);
-                            isPointVisible.Add(false);
+                            interPoints.Add(new VisibleSdlPoint()
+                            {
+                                Point = interPoint.Value,
+                                IsVisible = false
+                            });
                         }
                     }
                 }
-                return new Polygon(interPoints.ToArray(), isPointVisible.ToArray())
-                {
-                    Rotate = lower.Rotate,
-                    Scale = lower.Scale,
-                    TransformX = lower.TransformX,
-                    TransformY = lower.TransformY
-                };
+                return new InterceptedShape(interPoints.ToArray());
             }
 
             private static SDL.SDL_Point? FindLinesIntersectionPoint(SDL.SDL_Point f1, SDL.SDL_Point f2, SDL.SDL_Point s1, SDL.SDL_Point s2)
@@ -481,11 +434,205 @@ namespace Lab3
                 double c1 = 1.0*(f2.x*f1.y - f1.x*f2.y)/(f2.x - f2.y);
                 double c2 = 1.0 * (s2.x * s1.y - s1.x * s2.y) / (s2.x - s2.y);
                 var probX = (c1 - c2)/(k2 - k1);
-                if (probX >= Math.Min(f1.x, f2.x) && probX <= Math.Max(f1.x, f2.x))
+                if (probX >= Math.Min(f1.x,f2.x) && probX <= Math.Max(f1.x,f2.x) && probX >= Math.Min(s1.x,s2.x) && probX <= Math.Max(s1.x,f2.x))
                 {
-                    return new SDL.SDL_Point() {x = (int) probX, y = (int) (k1*probX + c1)};
+                    return new SDL.SDL_Point() {x = Convert.ToInt32(probX), y = Convert.ToInt32((k1*probX + c1))};
                 }
                 return null;
+            }
+
+            private static bool IsPointInPolygon(SDL.SDL_Point[] polygonPoints, SDL.SDL_Point point)
+            {
+                bool result = false;
+                for (int i = 0, j = polygonPoints.Length - 1; i < polygonPoints.Length; j = i++)
+                {
+                    if ((((polygonPoints[i].y <= point.y) && (point.y < polygonPoints[j].y)) ||
+                         ((polygonPoints[j].y <= point.y) && (point.y < polygonPoints[i].y))) &&
+                        (point.x >
+                         (polygonPoints[j].x - polygonPoints[i].x) * (point.y - polygonPoints[i].y) /
+                         (polygonPoints[j].y - polygonPoints[i].y) + polygonPoints[i].x))
+                        result = !result;
+                }
+                return result;
+            }
+
+            #region unusefulMethods
+            //public static Ellipse FindPolygonEllipseIntersection(Polygon polygon, Ellipse ellipse)
+            //{
+            //    Ellipse result = ellipse.Clone();
+            //    for (int i = 0; i < result.ShapePoints.Length; i++)
+            //    {
+            //        if (IsPointInPolygon(polygon.ShapePoints, result.ShapePoints[i]))
+            //        {
+            //            result.IsPointVisibleArray[i] = false;
+            //        }
+            //    }
+            //    return result;
+            //}
+
+            //public static Polygon FindEllipsePolygonIntersection(Polygon polygon, Ellipse ellipse)
+            //{
+            //    List<SDL.SDL_Point> interPoints = new List<SDL.SDL_Point>();               
+            //    bool inPoly = true;
+            //    for (int i = 0; i < ellipse.ShapePoints.Length; i++)
+            //    {
+            //        if (inPoly)
+            //        {
+            //            if (IsPointInPolygon(polygon.ShapePoints, ellipse.ShapePoints[i]))
+            //            {
+            //                interPoints.Add(ellipse.ShapePoints[i]);
+            //                inPoly = false;
+            //            }
+
+            //        }
+            //        else
+            //        {
+            //            if (!IsPointInPolygon(polygon.ShapePoints, ellipse.ShapePoints[i]))
+            //            {
+            //                interPoints.Add(ellipse.ShapePoints[i - 1]);
+            //                inPoly = true;
+            //            }
+            //        }
+            //    }
+            //    List<SDL.SDL_Point> joinedPoints = new List<SDL.SDL_Point>();
+            //    List<bool> isPointVisible = new List<bool>();
+            //    for (int i = 0; i < polygon.ShapePoints.Length; i++)
+            //    {
+            //        joinedPoints.Add(polygon.ShapePoints[i]);
+            //        isPointVisible.Add(!IsPointInPolygon(ellipse.ShapePoints, polygon.ShapePoints[i]));
+
+            //        foreach (var p in interPoints)
+            //        {
+            //            var index = 0;
+            //            for (int j = 1; j < polygon.ShapePoints.Length; j++)
+            //            {
+            //                if (Length(p, polygon.ShapePoints[j]) < Length(p, polygon.ShapePoints[index]))
+            //                {
+            //                    index = j;
+            //                }
+            //            }
+            //            if (index == i)
+            //            {
+            //                joinedPoints.Add(p);
+            //                isPointVisible.Add(false);
+            //            }
+            //        }
+            //    }
+            //    return new Polygon(joinedPoints.ToArray(), isPointVisible.ToArray())
+            //    {
+            //        Rotate = polygon.Rotate,
+            //        Scale = polygon.Scale,
+            //        TransformX = polygon.TransformX,
+            //        TransformY = polygon.TransformY
+            //    };
+            //}
+
+            //private static double Length(SDL.SDL_Point p1, SDL.SDL_Point p2)
+            //{
+            //    return Math.Sqrt(Math.Pow(p1.x - p2.x, 2) + Math.Pow(p1.y - p2.y, 2));
+            //}
+            #endregion
+        }
+
+        private abstract class Shape
+        {
+            private SDL.SDL_Point[] shapePoints;
+            protected SDL.SDL_Point[] initPoints;
+
+            private readonly PointTransformer transformer = new PointTransformer()
+            {
+                Rotate = 0,
+                Scale = 1,
+                TransformX = 0,
+                TransformY = 0
+            };
+
+            public int Rotate
+            {
+                get { return transformer.Rotate; }
+                set
+                {
+                    transformer.Rotate = value;
+                    shapePoints = transformer.TransformPoints(initPoints);
+                }
+            }
+
+            public double Scale
+            {
+                get { return transformer.Scale; }
+                set
+                {
+                    transformer.Scale = value;
+                    shapePoints = transformer.TransformPoints(initPoints);
+                }
+            }
+
+            public int TransformX
+            {
+                get { return transformer.TransformX; }
+                set
+                {
+                    transformer.TransformX = value;
+                    shapePoints = transformer.TransformPoints(initPoints);
+                }
+            }
+
+            public int TransformY
+            {
+                get { return transformer.TransformY; }
+                set
+                {
+                    transformer.TransformY = value;
+                    shapePoints = transformer.TransformPoints(initPoints);
+                }
+            }
+
+            public int Layer { get; set; }
+
+            public virtual SDL.SDL_Point[] Points
+                => shapePoints ?? (shapePoints = transformer.TransformPoints(initPoints));
+        }
+
+        private class InterceptedShape
+        {
+            public InterceptedShape(VisibleSdlPoint[] points)
+            {
+                this.Points = points;
+            }
+            public VisibleSdlPoint[] Points { get; }
+            public int Layer { get; set; }
+        }
+
+        private class Polygon : Shape
+        {
+            public Polygon(SDL.SDL_Point[] points)
+            {
+                this.initPoints = points;
+            }
+        }
+
+        private class Ellipse : Shape
+        {
+            private const int PointNum = 100;
+
+            public Ellipse(int A, int B)
+            {
+                this.initPoints = InitPoints(A, B);
+            }
+
+            private SDL.SDL_Point[] InitPoints(int A, int B)
+            {
+
+                var result = new SDL.SDL_Point[PointNum];
+                for (int i = 0; i < result.Length; i++)
+                {
+                    result[i] = new SDL.SDL_Point
+                    {
+                        x = Convert.ToInt32(A * Math.Cos(2 * Math.PI / PointNum * i)),
+                        y = Convert.ToInt32(B * Math.Sin(2 * Math.PI / PointNum * i))
+                    };
+                }
+                return result;
             }
         }
 
