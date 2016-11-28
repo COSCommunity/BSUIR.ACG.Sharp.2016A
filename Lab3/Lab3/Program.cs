@@ -146,7 +146,6 @@ namespace Lab3
                                     frame.TransformX += 10;
                                     break;
                             }
-                            DrawShapes(renderer, shapes);
                             break;
                         }
                         case SDL.SDL_EventType.SDL_MOUSEBUTTONDOWN:
@@ -165,7 +164,6 @@ namespace Lab3
                                     frame.Scale -= 0.05;
                                 }
                             }
-                            DrawShapes(renderer, shapes);
                             break;
                         }
 
